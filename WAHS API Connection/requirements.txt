@@ -13,3 +13,4 @@ requests
 pyarrow
 pandas-gbq
 google-cloud-secret-manager
+gunicorn
