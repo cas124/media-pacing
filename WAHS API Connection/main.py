@@ -122,7 +122,7 @@ def run_pipeline(request=None):
     access_token = auth_client.access_token
     print("--- Authentication Success. Starting Pipeline Execution ---")
     
-    print("✅ QBO Client authenticated and tokens refreshed.")
+    print("✅ QBO Client authenticated and tokens refreshed. Ready for BQ sync.") 
 
 
     # ==============================================================================
