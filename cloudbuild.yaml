@@ -1,0 +1,29 @@
+# File: cloudbuild.yaml (Place in the root of your repository)
+
+steps:
+  # Step 1: Build the Docker image
+  # This uses the standard Docker builder provided by Google Cloud Build.
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      # Use --no-cache to force a clean build each time, avoiding stale layers
+      - '--no-cache'
+      # Tag the image with the Artifact Registry path using built-in variables
+      - '-t'
+      - '${_AR_HOSTNAME}/${PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}:${COMMIT_SHA}'
+      # '.' means build the image from the current directory (where Dockerfile is)
+      - '.'
+      # Explicitly state the Dockerfile name (though 'Dockerfile' is default)
+      - '-f'
+      - 'Dockerfile'
+    id: Build
+
+  # Step 2: Push the built image to Artifact Registry
+  # This makes the image available for Cloud Run to use.
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_AR_HOSTNAME}/${PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}:${COMMIT_SHA}']
+    id: Push
+
+# Specify the final image name that Cloud Build should report
+images:
+  - '${_AR_HOSTNAME}/${PROJECT
