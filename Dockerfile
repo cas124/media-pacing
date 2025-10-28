@@ -13,9 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code (including main.py)
 COPY . /app
 
-# --- ADD THIS DEBUG LINE ---
-RUN ls -laR /app
-
 # Set the environment variable for your BQ key path
 ENV BQ_KEY_FILE="we_are_hipaa_smart_google_key.json"
 
