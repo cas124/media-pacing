@@ -2,28 +2,34 @@
 
 steps:
   # Step 1: Build the Docker image
-  # This uses the standard Docker builder provided by Google Cloud Build.
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
-      # Use --no-cache to force a clean build each time, avoiding stale layers
       - '--no-cache'
-      # Tag the image with the Artifact Registry path using built-in variables
       - '-t'
       - '${_AR_HOSTNAME}/${PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}:${COMMIT_SHA}'
-      # '.' means build the image from the current directory (where Dockerfile is)
-      - '.'
-      # Explicitly state the Dockerfile name (though 'Dockerfile' is default)
+      - '.' # Build context is the root directory
       - '-f'
-      - 'Dockerfile'
+      - 'Dockerfile' # Specifies the Dockerfile name
     id: Build
 
   # Step 2: Push the built image to Artifact Registry
-  # This makes the image available for Cloud Run to use.
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', '${_AR_HOSTNAME}/${PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}:${COMMIT_SHA}']
     id: Push
 
-# Specify the final image name that Cloud Build should report
+# Specify the final image(s) created by the build
 images:
-  - '${_AR_HOSTNAME}/${PROJECT
+  - '${_AR_HOSTNAME}/${PROJECT_ID}/${_AR_REPOSITORY}/${REPO_NAME}:${COMMIT_SHA}'
+
+# Options for the build environment
+options:
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: '100'
+  logging: CLOUD_LOGGING_ONLY
+
+# Default substitution values (Cloud Build often provides these automatically)
+substitutions:
+  REPO_NAME: 'wahs-api-connection' # Should match your repo name if needed by variables
+  _AR_HOSTNAME: 'us-central1-docker.pkg.dev' # Adjust region if necessary
+  _AR_REPOSITORY: 'cloud-run-source-deploy' # Default repo created by Cloud Run
