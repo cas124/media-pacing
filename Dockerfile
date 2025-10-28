@@ -7,6 +7,7 @@ WORKDIR /app
 # Copy the requirements file and install dependencies
 # This is where your long list of pip packages gets installed
 COPY requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code (including main.py)
