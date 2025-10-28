@@ -21,4 +21,4 @@ ENV BQ_KEY_FILE="we_are_hipaa_smart_google_key.json"
 
 # Set the entry point to your Python function (run_pipeline)
 # The Cloud Run service itself will send the POST request to trigger this.
-CMD ["python", "WAHS API Connection/main.py"]
+CMD ["python", "/app/WAHS API Connection/main.py"]
