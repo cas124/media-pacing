@@ -343,3 +343,12 @@ def run_pipeline(request=None):
 
 # Final call is omitted for deployment. The cloud function calls run_pipeline().
 # NOTE: All function definitions must be placed in your final main.py file.
+
+
+# ==============================================================================
+# LOCAL EXECUTION ENTRY POINT (Run this function)
+# ==============================================================================
+
+if __name__ == "__main__":
+    # This calls the main pipeline function when the script is run directly.
+    run_pipeline()
