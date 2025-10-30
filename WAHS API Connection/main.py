@@ -257,11 +257,11 @@ def run_pipeline(request=None):
 
     # --- EXECUTION: Runs both extraction functions ---
     print("Checkpoint A: Starting Sales Receipts Fetch")
-    df_receipts_raw = fetch_qbo_sales_receipts_raw(access_token, company_id, env_base, TARGET_PRODUCT)
+    df_receipts_raw = fetch_qbo_sales_receipts_raw(access_token, COMPANY_ID, env_base, TARGET_PRODUCT)
     print("Checkpoint B: Sales Receipts Fetch Complete")
 
     print("Checkpoint C: Starting Invoices Fetch")
-    df_invoices_raw = fetch_qbo_invoices_raw(access_token, company_id, env_base, TARGET_PRODUCT)
+    df_invoices_raw = fetch_qbo_invoices_raw(access_token, COMPANY_ID, env_base, TARGET_PRODUCT)
     print("Checkpoint D: Invoices Fetch Complete")
 
 
