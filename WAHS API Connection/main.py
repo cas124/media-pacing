@@ -113,7 +113,7 @@ def run_pipeline(request=None):
         
         # CRITICAL: If token changed, update the secret manager
         if new_refresh_token != QB_REFRESH_TOKEN_INITIAL:
-            update_refresh_token(QB_PROJECT_ID, QB_SECRET_NAME, new_refresh_token)
+            update_refresh_token(PROJECT_ID_FOR_SECRETS, QB_SECRET_NAME, new_refresh_token)
 
     except Exception as e:
         print(f"❌ QBO Authentication Failed during refresh: {e}")
