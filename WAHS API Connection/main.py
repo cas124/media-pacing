@@ -73,7 +73,7 @@ def run_pipeline(request=None):
         # Dynamic Secrets and Project IDs
         QB_SECRET_NAME = os.environ['QB_SECRET_NAME'] # Name of the secret holding the Refresh Token
         COMPANY_ID = os.environ['QB_COMPANY_ID']     # Realm ID
-        BQ_PROJECT_ID = os.environ.get('BQ_PROJECT_ID') 
+        BQ_PROJECT_ID = os.environ['BQ_PROJECT_ID']
         
     except KeyError as e:
         print(f"❌ ERROR: Missing required environment variable: {e}")
@@ -86,7 +86,7 @@ def run_pipeline(request=None):
     # --- Project ID for Secret Manager Operations ---
     # Determine the project ID where the secret is stored (usually the current project)
     # If BQ_PROJECT_ID is set, use it; otherwise, attempt to infer it.
-    PROJECT_ID_FOR_SECRETS = BQ_PROJECT_ID if BQ_PROJECT_ID else "GCP_PROJECT_ID_HERE" 
+    PROJECT_ID_FOR_SECRETS = BQ_PROJECT_ID
 
 
     # ==============================================================================
@@ -175,7 +175,7 @@ def run_pipeline(request=None):
         print(f"✅ Extraction complete. Total {len(all_records)} Sales Receipt records found.")
         return df_raw
 
-    def fetch_qbo_invoices_raw(access_token, COMPANY_ID base_url, product_name):
+    def fetch_qbo_invoices_raw(access_token, COMPANY_ID, base_url, product_name):
         all_records = []
         start_pos = 1
         max_results = 1000
