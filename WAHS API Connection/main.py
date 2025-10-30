@@ -130,7 +130,7 @@ def run_pipeline(request=None):
     # ==============================================================================
     
     # --- Function Definitions (Moved inside for cleaner global namespace) ---
-    def fetch_qbo_sales_receipts_raw(access_token, company_id, base_url, product_name):
+    def fetch_qbo_sales_receipts_raw(access_token, COMPANY_ID, base_url, product_name):
         # ... (full function definition for sales receipts)
         all_records = []
         start_pos = 1
@@ -141,7 +141,7 @@ def run_pipeline(request=None):
 
         while start_pos <= 1000:
             qbo_query = f"{qbo_base_query} STARTPOSITION {start_pos} MAXRESULTS {max_results}"
-            api_url = f"{base_url}/v3/company/{company_id}/query"
+            api_url = f"{base_url}/v3/company/{COMPANY_ID}/query"
 
             headers = {
                 'Authorization': f'Bearer {access_token}',
@@ -175,7 +175,7 @@ def run_pipeline(request=None):
         print(f"✅ Extraction complete. Total {len(all_records)} Sales Receipt records found.")
         return df_raw
 
-    def fetch_qbo_invoices_raw(access_token, company_id, base_url, product_name):
+    def fetch_qbo_invoices_raw(access_token, COMPANY_ID base_url, product_name):
         all_records = []
         start_pos = 1
         max_results = 1000
@@ -186,7 +186,7 @@ def run_pipeline(request=None):
 
         while start_pos <= 1000: # Limit fetch to 1000 records total
             qbo_query = f"{qbo_base_query} STARTPOSITION {start_pos} MAXRESULTS {max_results}"
-            api_url = f"{base_url}/v3/company/{company_id}/query" 
+            api_url = f"{base_url}/v3/company/{COMPANY_ID}/query" 
 
             headers = {
                 'Authorization': f'Bearer {access_token}',
