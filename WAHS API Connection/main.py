@@ -16,7 +16,9 @@ from quickbooks.client import QuickBooks
 
 # --- Global Constants (Read from environment in run_pipeline) ---
 BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
-TARGET_PRODUCT = 'Products:We Are, HIPAA Smart' #'We Are, HIPAA Smart'
+
+# --- FIX #1: Use the exact, literal string you found in your BQ diagnostic query ---
+TARGET_PRODUCT = 'Products:We Are, HIPAA Smart' 
 
 # --- Final Global Helpers (Used inside run_pipeline) ---
 def clean_and_lower(text):
@@ -29,7 +31,6 @@ TARGET_PRODUCT_CLEAN = clean_and_lower(TARGET_PRODUCT)
 
 # ==============================================================================
 # GOOGLE CLOUD SECRET MANAGER HELPER FUNCTIONS
-# These functions handle secure reading and writing of the Refresh Token.
 # ==============================================================================
 
 # Initialize Secret Manager Client globally (best practice for Cloud Functions)
@@ -82,10 +83,6 @@ def run_pipeline(request=None):
     # Static Variables
     ENV = 'production' 
     env_base = "https://quickbooks.api.intuit.com" 
-    
-    # --- Project ID for Secret Manager Operations ---
-    # Determine the project ID where the secret is stored (usually the current project)
-    # If BQ_PROJECT_ID is set, use it; otherwise, attempt to infer it.
     PROJECT_ID_FOR_SECRETS = BQ_PROJECT_ID
 
 
@@ -111,7 +108,6 @@ def run_pipeline(request=None):
         auth_client.refresh(refresh_token=QB_REFRESH_TOKEN_INITIAL)
         new_refresh_token = auth_client.refresh_token
         
-        # CRITICAL: If token changed, update the secret manager
         if new_refresh_token != QB_REFRESH_TOKEN_INITIAL:
             update_refresh_token(PROJECT_ID_FOR_SECRETS, QB_SECRET_NAME, new_refresh_token)
 
@@ -138,7 +134,7 @@ def run_pipeline(request=None):
         
         print(f"\nStarting raw extraction for SALES RECEIPTS (Target: {product_name})...")
 
-        while True: # <--- Loop forever until we say stop
+        while True: 
             qbo_query = f"{qbo_base_query} STARTPOSITION {start_pos} MAXRESULTS {max_results}"
             api_url = f"{base_url}/v3/company/{COMPANY_ID}/query"
 
@@ -160,19 +156,16 @@ def run_pipeline(request=None):
             data = response.json()
             receipts = data.get('QueryResponse', {}).get('SalesReceipt', [])
 
-            # Check if any receipts were returned
             if not receipts:
                 print("No more sales receipts found. Ending fetch.")
-                break # Stop the loop if we get an empty list
+                break 
 
             all_records.extend(receipts)
             
-            # Check if this was the last page
-            if len(receipts) < max_results: # <--- FIX 2: This is the *only* condition to stop
+            if len(receipts) < max_results: 
                 print(f"Last page reached. Total {len(all_records)} sales receipts.")
                 break
             
-            # If we're still here, prepare for the next loop
             start_pos += max_results
             print(f"Fetched {len(all_records)} total sales receipt records, continuing to next page...")
 
@@ -192,7 +185,7 @@ def run_pipeline(request=None):
         
         print(f"\nStarting raw extraction for INVOICES (FULL FETCH for filtering)...")
 
-        while True: # <--- Loop forever until we say stop
+        while True: 
             qbo_query = f"{qbo_base_query} STARTPOSITION {start_pos} MAXRESULTS {max_results}"
             api_url = f"{base_url}/v3/company/{COMPANY_ID}/query" 
 
@@ -211,19 +204,16 @@ def run_pipeline(request=None):
             data = response.json()
             invoices = data.get('QueryResponse', {}).get('Invoice', [])
             
-            # Check if any invoices were returned
             if not invoices:
                 print("No more invoices found. Ending fetch.")
-                break # Stop the loop if we get an empty list
+                break 
 
             all_records.extend(invoices)
             
-            # Check if this was the last page
-            if len(invoices) < max_results: # <--- FIX 2: This is the *only* condition to stop
+            if len(invoices) < max_results: 
                 print(f"Last page reached. Total {len(all_records)} invoices.")
                 break
             
-            # If we're still here, prepare for the next loop
             start_pos += max_results
             print(f"Fetched {len(all_records)} total invoice records, continuing to next page...")
 
@@ -243,9 +233,7 @@ def run_pipeline(request=None):
         return None
 
     def process_and_filter_df(df_raw, target_product_clean):
-        # ... (full function definition for processing and filtering)
         
-        # CRITICAL FIX 1: If input is empty, return an empty DataFrame with the full schema
         EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'TotalAmt']
         if df_raw.empty:
             return pd.DataFrame(columns=EMPTY_COLS) 
@@ -261,9 +249,8 @@ def run_pipeline(request=None):
         df_lines['item_name_raw'] = df_lines['Line'].apply(get_item_name) 
         df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower)
         
-        # Filter the data frame 
+        # --- FIX #2: Re-enable the filter ---
         df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        #df_product_lines = df_lines.copy() # ***KEEP THIS TO DUMP ALL ROWS, DON'T CHANGE OR 0 ROWS RETURNED
         
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
@@ -296,7 +283,6 @@ def run_pipeline(request=None):
     # 4. COMBINE AND FINAL CLEANUP
     # --------------------------------------------------------
 
-    # Filter out any resulting None values and ensure we have an iterable of DataFrames
     dfs_to_concat = [df_filtered_receipts, df_filtered_invoices]
     dfs_to_concat = [df for df in dfs_to_concat if not df.empty]
 
@@ -354,19 +340,16 @@ def run_pipeline(request=None):
         job = bq_client.load_table_from_dataframe(df_to_load, table_ref, job_config=job_config)
         job.result() 
         
-        return f"QuickBooks data loaded successfully! Loaded {job.output_rows} rows.", 200
-
+        success_message = f"QuickBooks data loaded successfully! Loaded {job.output_rows} rows."
+        print(f"\n🚀 {success_message}\n") # Added print for visibility
+        return success_message, 200
+    
     except Exception as e:
         return f"BigQuery Load Failed: {e}", 500
-
-# Final call is omitted for deployment. The cloud function calls run_pipeline().
-# NOTE: All function definitions must be placed in your final main.py file.
-
 
 # ==============================================================================
 # LOCAL EXECUTION ENTRY POINT (Run this function)
 # ==============================================================================
 
 if __name__ == "__main__":
-    # This calls the main pipeline function when the script is run directly.
     run_pipeline()
