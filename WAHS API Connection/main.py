@@ -131,7 +131,6 @@ def run_pipeline(request=None):
     
     # --- Function Definitions (Moved inside for cleaner global namespace) ---
     def fetch_qbo_sales_receipts_raw(access_token, COMPANY_ID, base_url, product_name):
-        # ... (full function definition for sales receipts)
         all_records = []
         start_pos = 1
         max_results = 1000
@@ -139,7 +138,7 @@ def run_pipeline(request=None):
         
         print(f"\nStarting raw extraction for SALES RECEIPTS (Target: {product_name})...")
 
-        while start_pos <= 1000:
+        while True: # <--- Loop forever until we say stop
             qbo_query = f"{qbo_base_query} STARTPOSITION {start_pos} MAXRESULTS {max_results}"
             api_url = f"{base_url}/v3/company/{COMPANY_ID}/query"
 
@@ -160,13 +159,22 @@ def run_pipeline(request=None):
 
             data = response.json()
             receipts = data.get('QueryResponse', {}).get('SalesReceipt', [])
+
+            # Check if any receipts were returned
+            if not receipts:
+                print("No more sales receipts found. Ending fetch.")
+                break # Stop the loop if we get an empty list
+
             all_records.extend(receipts)
             
-            if len(all_records) >= 1000 or len(receipts) < max_results:
+            # Check if this was the last page
+            if len(receipts) < max_results: # <--- FIX 2: This is the *only* condition to stop
+                print(f"Last page reached. Total {len(all_records)} sales receipts.")
                 break
             
+            # If we're still here, prepare for the next loop
             start_pos += max_results
-            print(f"Fetched {len(all_records)} total records, continuing...")
+            print(f"Fetched {len(all_records)} total sales receipt records, continuing to next page...")
 
         df_raw = pd.DataFrame(all_records)
         if not df_raw.empty:
@@ -175,7 +183,7 @@ def run_pipeline(request=None):
         print(f"✅ Extraction complete. Total {len(all_records)} Sales Receipt records found.")
         return df_raw
 
-    def fetch_qbo_invoices_raw(access_token, COMPANY_ID, base_url, product_name):
+    ddef fetch_qbo_invoices_raw(access_token, COMPANY_ID, base_url, product_name):
         all_records = []
         start_pos = 1
         max_results = 1000
@@ -184,7 +192,7 @@ def run_pipeline(request=None):
         
         print(f"\nStarting raw extraction for INVOICES (FULL FETCH for filtering)...")
 
-        while start_pos <= 1000: # Limit fetch to 1000 records total
+        while True: # <--- Loop forever until we say stop
             qbo_query = f"{qbo_base_query} STARTPOSITION {start_pos} MAXRESULTS {max_results}"
             api_url = f"{base_url}/v3/company/{COMPANY_ID}/query" 
 
@@ -202,13 +210,22 @@ def run_pipeline(request=None):
 
             data = response.json()
             invoices = data.get('QueryResponse', {}).get('Invoice', [])
+            
+            # Check if any invoices were returned
+            if not invoices:
+                print("No more invoices found. Ending fetch.")
+                break # Stop the loop if we get an empty list
+
             all_records.extend(invoices)
             
-            if len(all_records) >= 1000 or len(invoices) < max_results:
+            # Check if this was the last page
+            if len(invoices) < max_results: # <--- FIX 2: This is the *only* condition to stop
+                print(f"Last page reached. Total {len(all_records)} invoices.")
                 break
             
+            # If we're still here, prepare for the next loop
             start_pos += max_results
-            print(f"Fetched {len(all_records)} total invoice records, continuing...")
+            print(f"Fetched {len(all_records)} total invoice records, continuing to next page...")
 
         df_raw = pd.DataFrame(all_records)
         
