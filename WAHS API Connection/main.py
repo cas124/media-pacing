@@ -263,7 +263,7 @@ def run_pipeline(request=None):
         
         # Filter the data frame 
         #df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
+        df_product_lines = df_lines.copy()
         
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
