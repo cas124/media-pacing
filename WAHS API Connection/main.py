@@ -18,7 +18,7 @@ from quickbooks.client import QuickBooks
 BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
 
 # --- FIX #1: Use the exact, literal string you found in your BQ diagnostic query ---
-TARGET_PRODUCT = 'Products:We Are, HIPAA Smart' 
+TARGET_PRODUCT = 'We Are, HIPAA Smart'
 
 # --- Final Global Helpers (Used inside run_pipeline) ---
 def clean_and_lower(text):
@@ -250,8 +250,9 @@ def run_pipeline(request=None):
         df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower)
         
         # --- FIX #2: Re-enable the filter ---
-        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        
+        #df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
+        df_product_lines = df_lines.copy() # Add this line to bypass the filter
+
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
             return pd.DataFrame(columns=EMPTY_COLS)
