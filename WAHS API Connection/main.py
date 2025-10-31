@@ -183,7 +183,7 @@ def run_pipeline(request=None):
         print(f"✅ Extraction complete. Total {len(all_records)} Sales Receipt records found.")
         return df_raw
 
-    ddef fetch_qbo_invoices_raw(access_token, COMPANY_ID, base_url, product_name):
+    def fetch_qbo_invoices_raw(access_token, COMPANY_ID, base_url, product_name):
         all_records = []
         start_pos = 1
         max_results = 1000
@@ -263,7 +263,7 @@ def run_pipeline(request=None):
         
         # Filter the data frame 
         #df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        df_product_lines = df_lines.copy()
+        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
         
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
