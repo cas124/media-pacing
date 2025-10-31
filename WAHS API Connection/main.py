@@ -16,7 +16,7 @@ from quickbooks.client import QuickBooks
 
 # --- Global Constants (Read from environment in run_pipeline) ---
 BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
-TARGET_PRODUCT = 'We Are, HIPAA Smart'
+TARGET_PRODUCT = 'We Are, HIPAA Smart' #'We Are, HIPAA Smart'
 
 # --- Final Global Helpers (Used inside run_pipeline) ---
 def clean_and_lower(text):
@@ -262,8 +262,8 @@ def run_pipeline(request=None):
         df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower)
         
         # Filter the data frame 
-        #df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        df_product_lines = df_lines.copy()
+        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
+        #df_product_lines = df_lines.copy() # ***KEEP THIS TO DUMP ALL ROWS, DON'T CHANGE OR 0 ROWS RETURNED
         
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
