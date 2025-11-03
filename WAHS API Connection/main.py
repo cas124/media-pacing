@@ -236,7 +236,7 @@ def run_pipeline(request=None):
     def process_and_filter_df(df_raw, target_product_clean):
         
         # Define the schema for empty DataFrames
-        EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']
+        EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'TotalAmt', 'Line_JSON']
         
         if df_raw.empty:
             return pd.DataFrame(columns=EMPTY_COLS) 
@@ -252,9 +252,13 @@ def run_pipeline(request=None):
         df_lines['item_name_raw'] = df_lines['Line'].apply(get_item_name) 
         df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower)
         
-        # --- FIX #3: Re-enable the filter ---
-        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        
+        # 4: Bypass the filter ---
+        #df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
+        df_product_lines = df_lines.copy()
+
+        # 5. Add the raw Line JSON as a string
+        df_product_lines['Line_JSON'] = df_product_lines['Line'].apply(json.dumps)
+
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
             return pd.DataFrame(columns=EMPTY_COLS)
@@ -264,7 +268,7 @@ def run_pipeline(request=None):
         df_product_lines['Amount'] = df_product_lines['Line'].apply(lambda x: x.get('Amount') if isinstance(x, dict) else 0)
         
         # 5. Return the filtered DataFrame with the required final columns
-        return df_product_lines[['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']].copy()
+        return df_product_lines[['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'TotalAmt', 'Line_JSON']].copy()
 
 
     # --- EXECUTION: Runs both extraction functions ---
@@ -303,7 +307,7 @@ def run_pipeline(request=None):
         df_combined_filtered = pd.concat(dfs_to_concat, ignore_index=True)
 
         # --- Final Selection and Rename ---
-        amount_key = 'Amount' # Use the line-item amount key
+        amount_key = 'TotalAmt' # Use the line-item amount key
         
         df_payments_final = df_combined_filtered[[
             'Id', 
@@ -312,6 +316,7 @@ def run_pipeline(request=None):
             'item_name_raw', 
             'transaction_type', 
             amount_key, 
+            'Line_JSON'  # <-- ADD THIS
         ]].rename(columns={
             'Id': 'transaction_id', 
             amount_key: 'total_amount', 
