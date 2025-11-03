@@ -1,16 +1,10 @@
-ipywidgets==8.1.2
-matplotlib==3.8.4
-pandas==2.2.2
-torch==2.8.0
-torchvision==0.23.0
-tqdm==4.66.4
 
-# File: requirements.txt
-python-quickbooks
-intuit-oauth
-google-cloud-bigquery
+pandas
 requests
+google-cloud-bigquery
+intuit-oauth
 pyarrow
 pandas-gbq
+numpy
 google-cloud-secret-manager
-gunicorn
+gunicorn # Needed for CMD in some Cloud Run setups, keep for now
