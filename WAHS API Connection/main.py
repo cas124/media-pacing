@@ -14,14 +14,24 @@ import numpy as np
 from intuitlib.client import AuthClient 
 from quickbooks.client import QuickBooks 
 
-# --- Global Constants ---
+# --- Global Constants (Read from environment in run_pipeline) ---
+BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
 
-# --- CRITICAL FIX: Use the absolute path inside the container ---
-# The Dockerfile copies this file to /app/
-BQ_KEY_FILE = '/secrets/bigquery-sa-key'
+# ---
+# --- 
+# --- CRITICAL FIX: Using the correct master product name (no "Products:" prefix) ---
+# --- 
+# ---
+TARGET_PRODUCT = 'We Are, HIPAA Smart'
 
-# --- Use the exact, literal string you found in your BQ diagnostic query ---
-TARGET_PRODUCT = 'Products:We Are HIPAA Smart' 
+# --- Final Global Helpers (Used inside run_pipeline) ---
+def clean_and_lower(text):
+    """Robustly cleans input, ensuring it's a string, and converts to lowercase."""
+    s = str(text) if not pd.isna(text) and text is not None else ""
+    return ' '.join(s.split()).lower()
+
+# The clean target product is derived once
+TARGET_PRODUCT_CLEAN = clean_and_lower(TARGET_PRODUCT) 
 
 # ==============================================================================
 # GOOGLE CLOUD SECRET MANAGER HELPER FUNCTIONS
@@ -220,24 +230,13 @@ def run_pipeline(request=None):
         return df_raw
 
     def get_item_name(line):
-        """
-        Safely extracts the item name.
-        Checks the Description field first, then falls back to ItemRef.name.
-        """
-        if isinstance(line, dict):
-            # 1. Check the 'Description' field first.
-            # This is often where "Category:Product" strings are stored.
-            name = line.get('Description')
-            
-            # 2. If Description is empty, check the ItemRef.name
-            if not name and line.get('SalesItemLineDetail'):
-                name = line['SalesItemLineDetail'].get('ItemRef', {}).get('name')
-                
+        if isinstance(line, dict) and line.get('SalesItemLineDetail'):
+            name = line['SalesItemLineDetail'].get('ItemRef', {}).get('name')
             if name:
                 return str(name).strip() 
         return None
 
-    def process_and_filter_df(df_raw, target_product_string):
+    def process_and_filter_df(df_raw, target_product_clean):
         
         # Define the schema for empty DataFrames
         EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']
@@ -252,34 +251,28 @@ def run_pipeline(request=None):
         # 2. Explode the line items
         df_lines = df_raw.explode('Line', ignore_index=True) 
 
-        # 3. Extract Item Name
+        # 3. Extract Item Name and Apply Filter 
         df_lines['item_name_raw'] = df_lines['Line'].apply(get_item_name) 
-
-        # --- NEW ROBUST FILTER LOGIC ---
+        df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower) # Uses the global clean_and_lower
         
-        # 4. Normalize the target string (aggressive clean)
-        # Replaces all whitespace with a single space, lowers, and strips.
-        target_clean = ' '.join(str(target_product_string).split()).lower()
-
-        # 5. Normalize the data column (aggressive clean)
-        # We use .astype(str) to force everything to a string, then clean and lower.
-        df_lines['item_name_lower'] = df_lines['item_name_raw'].astype(str).apply(lambda x: ' '.join(x.split()).lower())
-        
-        # 6. Apply the filter
-        df_product_lines = df_lines[df_lines['item_name_lower'] == target_clean].copy()
-        
-        # -------------------------------
+        # ---
+        # --- 
+        # --- CRITICAL FIX: The filter is now active ---
+        # --- 
+        # ---
+        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
         
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
             return pd.DataFrame(columns=EMPTY_COLS)
         
-        # 7. Add the line-item Amount column
+        # 4. Add the line-item Amount column
+        # This key ('Amount') is the only one guaranteed to exist on the line item
         df_product_lines['Amount'] = df_product_lines['Line'].apply(lambda x: x.get('Amount') if isinstance(x, dict) else 0)
         
-        # 8. Return the filtered DataFrame with the required final columns
+        # 5. Return the filtered DataFrame with the required final columns
         return df_product_lines[['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']].copy()
-    
+
 
     # --- EXECUTION: Runs both extraction functions ---
     print("Checkpoint A: Starting Sales Receipts Fetch")
@@ -293,9 +286,9 @@ def run_pipeline(request=None):
 
     # --- Process Each DataFrame Separately and Filter ---
     print("Checkpoint E: Starting Filtering (Receipts)")
-    df_filtered_receipts = process_and_filter_df(df_receipts_raw, TARGET_PRODUCT) # <-- Pass original variable
+    df_filtered_receipts = process_and_filter_df(df_receipts_raw, TARGET_PRODUCT_CLEAN)
     print("Checkpoint F: Starting Filtering (Invoices)")
-    df_filtered_invoices = process_and_filter_df(df_invoices_raw, TARGET_PRODUCT) # <-- Pass original variable
+    df_filtered_invoices = process_and_filter_df(df_invoices_raw, TARGET_PRODUCT_CLEAN)
     print("Checkpoint G: Filtering Complete. Starting Concat.")
 
 
@@ -347,7 +340,6 @@ def run_pipeline(request=None):
         bq_client = bigquery.Client.from_service_account_json(BQ_KEY_FILE) 
         print("✅ BigQuery Client authenticated.")
     except Exception as e:
-        print(f"❌ BigQuery Auth Failed (Key File): {e}")
         return f"BigQuery Auth Failed (Key File): {e}", 500
 
     # Define Target and Execute Load Job
