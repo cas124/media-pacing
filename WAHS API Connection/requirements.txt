@@ -1,4 +1,4 @@
-
+# File: requirements.txt
 pandas
 requests
 google-cloud-bigquery
@@ -7,4 +7,5 @@ pyarrow
 pandas-gbq
 numpy
 google-cloud-secret-manager
-gunicorn # Needed for CMD in some Cloud Run setups, keep for now
+gunicorn
+python-quickbooks  # <-- ADD THIS MISSING LINE
