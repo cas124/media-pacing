@@ -17,12 +17,8 @@ from quickbooks.client import QuickBooks
 # --- Global Constants (Read from environment in run_pipeline) ---
 BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
 
-# ---
-# --- 
-# --- CRITICAL FIX: Using the correct master product name (no "Products:" prefix) ---
-# --- 
-# ---
-TARGET_PRODUCT = 'We Are, HIPAA Smart'
+# NEW (The correct string from your BQ diagnostic)
+TARGET_PRODUCT = 'Products:We Are, HIPAA Smart'
 
 # --- Final Global Helpers (Used inside run_pipeline) ---
 def clean_and_lower(text):
