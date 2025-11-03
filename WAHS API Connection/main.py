@@ -220,8 +220,19 @@ def run_pipeline(request=None):
         return df_raw
 
     def get_item_name(line):
-        if isinstance(line, dict) and line.get('SalesItemLineDetail'):
-            name = line['SalesItemLineDetail'].get('ItemRef', {}).get('name')
+        """
+        Safely extracts the item name.
+        Checks the Description field first, then falls back to ItemRef.name.
+        """
+        if isinstance(line, dict):
+            # 1. Check the 'Description' field first.
+            # This is often where "Category:Product" strings are stored.
+            name = line.get('Description')
+            
+            # 2. If Description is empty, check the ItemRef.name
+            if not name and line.get('SalesItemLineDetail'):
+                name = line['SalesItemLineDetail'].get('ItemRef', {}).get('name')
+                
             if name:
                 return str(name).strip() 
         return None
