@@ -16,9 +16,7 @@ from quickbooks.client import QuickBooks
 
 # --- Global Constants (Read from environment in run_pipeline) ---
 BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
-
-# --- FIX #1: Use the exact, literal string you found in your BQ diagnostic query ---
-TARGET_PRODUCT = 'We Are, HIPAA Smart'
+TARGET_PRODUCT = 'We Are, HIPAA Smart' # <-- Update this if your diagnostic found a different string
 
 # --- Final Global Helpers (Used inside run_pipeline) ---
 def clean_and_lower(text):
@@ -249,10 +247,9 @@ def run_pipeline(request=None):
         df_lines['item_name_raw'] = df_lines['Line'].apply(get_item_name) 
         df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower)
         
-        # --- FIX #2: Re-enable the filter ---
-        #df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        df_product_lines = df_lines.copy() # Add this line to bypass the filter
-
+        # --- Make sure your filter is active ---
+        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
+        
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
             return pd.DataFrame(columns=EMPTY_COLS)
@@ -325,6 +322,7 @@ def run_pipeline(request=None):
     # Authenticate BigQuery using the Service Account file deployed with the function
     try:
         bq_client = bigquery.Client.from_service_account_json(BQ_KEY_FILE) 
+        print("✅ BigQuery Client authenticated.") # <-- THIS LOG WAS MISSING
     except Exception as e:
         return f"BigQuery Auth Failed (Key File): {e}", 500
 
@@ -342,7 +340,7 @@ def run_pipeline(request=None):
         job.result() 
         
         success_message = f"QuickBooks data loaded successfully! Loaded {job.output_rows} rows."
-        print(f"\n🚀 {success_message}\n") # Added print for visibility
+        print(f"\n🚀 {success_message}\n") # <-- THIS LOG WAS MISSING
         return success_message, 200
     
     except Exception as e:
