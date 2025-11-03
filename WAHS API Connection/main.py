@@ -16,7 +16,9 @@ from quickbooks.client import QuickBooks
 
 # --- Global Constants (Read from environment in run_pipeline) ---
 BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
-TARGET_PRODUCT = 'Products:We Are, HIPAA Smart' #'We Are, HIPAA Smart' # <-- Update this if your diagnostic found a different string
+
+# --- FIX #1: Using the exact, literal string from your BQ diagnostic query ---
+TARGET_PRODUCT = 'Products:We Are HIPAA Smart'
 
 # --- Final Global Helpers (Used inside run_pipeline) ---
 def clean_and_lower(text):
@@ -31,7 +33,7 @@ TARGET_PRODUCT_CLEAN = clean_and_lower(TARGET_PRODUCT)
 # GOOGLE CLOUD SECRET MANAGER HELPER FUNCTIONS
 # ==============================================================================
 
-# Initialize Secret Manager Client globally (best practice for Cloud Functions)
+# Initialize Secret Manager Client globally
 SECRET_CLIENT = secretmanager.SecretManagerServiceClient() 
 
 def get_latest_refresh_token(project_id, secret_name):
@@ -106,6 +108,7 @@ def run_pipeline(request=None):
         auth_client.refresh(refresh_token=QB_REFRESH_TOKEN_INITIAL)
         new_refresh_token = auth_client.refresh_token
         
+        # CRITICAL: If token changed, update the secret manager
         if new_refresh_token != QB_REFRESH_TOKEN_INITIAL:
             update_refresh_token(PROJECT_ID_FOR_SECRETS, QB_SECRET_NAME, new_refresh_token)
 
@@ -232,7 +235,9 @@ def run_pipeline(request=None):
 
     def process_and_filter_df(df_raw, target_product_clean):
         
-        EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'TotalAmt']
+        # Define the schema for empty DataFrames
+        EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']
+        
         if df_raw.empty:
             return pd.DataFrame(columns=EMPTY_COLS) 
 
@@ -247,15 +252,19 @@ def run_pipeline(request=None):
         df_lines['item_name_raw'] = df_lines['Line'].apply(get_item_name) 
         df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower)
         
-        # --- Make sure your filter is active ---
+        # --- FIX #3: Re-enable the filter ---
         df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
         
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
             return pd.DataFrame(columns=EMPTY_COLS)
         
-        # 4. Return the filtered DataFrame with the required final columns
-        return df_product_lines[['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'TotalAmt']].copy()
+        # 4. Add the line-item Amount column
+        # This key ('Amount') is the only one guaranteed to exist on the line item
+        df_product_lines['Amount'] = df_product_lines['Line'].apply(lambda x: x.get('Amount') if isinstance(x, dict) else 0)
+        
+        # 5. Return the filtered DataFrame with the required final columns
+        return df_product_lines[['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']].copy()
 
 
     # --- EXECUTION: Runs both extraction functions ---
@@ -294,7 +303,7 @@ def run_pipeline(request=None):
         df_combined_filtered = pd.concat(dfs_to_concat, ignore_index=True)
 
         # --- Final Selection and Rename ---
-        amount_key = 'TotalAmt' 
+        amount_key = 'Amount' # Use the line-item amount key
         
         df_payments_final = df_combined_filtered[[
             'Id', 
@@ -322,7 +331,7 @@ def run_pipeline(request=None):
     # Authenticate BigQuery using the Service Account file deployed with the function
     try:
         bq_client = bigquery.Client.from_service_account_json(BQ_KEY_FILE) 
-        print("✅ BigQuery Client authenticated.") # <-- THIS LOG WAS MISSING
+        print("✅ BigQuery Client authenticated.")
     except Exception as e:
         return f"BigQuery Auth Failed (Key File): {e}", 500
 
@@ -340,7 +349,7 @@ def run_pipeline(request=None):
         job.result() 
         
         success_message = f"QuickBooks data loaded successfully! Loaded {job.output_rows} rows."
-        print(f"\n🚀 {success_message}\n") # <-- THIS LOG WAS MISSING
+        print(f"\n🚀 {success_message}\n")
         return success_message, 200
     
     except Exception as e:
