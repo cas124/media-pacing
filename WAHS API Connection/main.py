@@ -18,7 +18,7 @@ from quickbooks.client import QuickBooks
 
 # --- CRITICAL FIX: Use the absolute path inside the container ---
 # The Dockerfile copies this file to /app/
-BQ_KEY_FILE = '/app/we_are_hipaa_smart_google_key.json' 
+BQ_KEY_FILE = '/app/WAHS API Connection/we_are_hipaa_smart_google_key.json'
 
 # --- Use the exact, literal string you found in your BQ diagnostic query ---
 TARGET_PRODUCT = 'Products:We Are HIPAA Smart' 
