@@ -15,7 +15,7 @@ from intuitlib.client import AuthClient
 from quickbooks.client import QuickBooks 
 
 # --- Global Constants (Read from environment in run_pipeline) ---
-BQ_KEY_FILE = '/app/we_are_hipaa_smart_google_key.json'
+BQ_KEY_FILE = '/secrets/bq-sa-key/key.json'
 
 # NEW (The correct string from your BQ diagnostic)
 TARGET_PRODUCT = 'Products:We Are, HIPAA Smart'
