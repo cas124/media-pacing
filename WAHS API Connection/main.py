@@ -14,11 +14,14 @@ import numpy as np
 from intuitlib.client import AuthClient 
 from quickbooks.client import QuickBooks 
 
-# --- Global Constants (Read from environment in run_pipeline) ---
-BQ_KEY_FILE = 'we_are_hipaa_smart_google_key.json' 
+# --- Global Constants ---
 
-# --- FIX #1: Using the exact, literal string from your BQ diagnostic query ---
-TARGET_PRODUCT = 'Products:We Are HIPAA Smart'
+# --- CRITICAL FIX: Use the absolute path inside the container ---
+# The Dockerfile copies this file to /app/
+BQ_KEY_FILE = '/app/we_are_hipaa_smart_google_key.json' 
+
+# --- Use the exact, literal string you found in your BQ diagnostic query ---
+TARGET_PRODUCT = 'Products:We Are HIPAA Smart' 
 
 # --- Final Global Helpers (Used inside run_pipeline) ---
 def clean_and_lower(text):
@@ -108,7 +111,6 @@ def run_pipeline(request=None):
         auth_client.refresh(refresh_token=QB_REFRESH_TOKEN_INITIAL)
         new_refresh_token = auth_client.refresh_token
         
-        # CRITICAL: If token changed, update the secret manager
         if new_refresh_token != QB_REFRESH_TOKEN_INITIAL:
             update_refresh_token(PROJECT_ID_FOR_SECRETS, QB_SECRET_NAME, new_refresh_token)
 
@@ -236,7 +238,7 @@ def run_pipeline(request=None):
     def process_and_filter_df(df_raw, target_product_clean):
         
         # Define the schema for empty DataFrames
-        EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'TotalAmt', 'Line_JSON']
+        EMPTY_COLS = ['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']
         
         if df_raw.empty:
             return pd.DataFrame(columns=EMPTY_COLS) 
@@ -252,13 +254,9 @@ def run_pipeline(request=None):
         df_lines['item_name_raw'] = df_lines['Line'].apply(get_item_name) 
         df_lines['item_name_lower'] = df_lines['item_name_raw'].apply(clean_and_lower)
         
-        # 4: Bypass the filter ---
-        #df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
-        df_product_lines = df_lines.copy()
-
-        # 5. Add the raw Line JSON as a string
-        df_product_lines['Line_JSON'] = df_product_lines['Line'].apply(json.dumps)
-
+        # --- Filter is now ACTIVE ---
+        df_product_lines = df_lines[df_lines['item_name_lower'] == target_product_clean].copy()
+        
         # Check 2: If the filtered result is empty, return an empty DataFrame with final schema
         if df_product_lines.empty:
             return pd.DataFrame(columns=EMPTY_COLS)
@@ -268,7 +266,7 @@ def run_pipeline(request=None):
         df_product_lines['Amount'] = df_product_lines['Line'].apply(lambda x: x.get('Amount') if isinstance(x, dict) else 0)
         
         # 5. Return the filtered DataFrame with the required final columns
-        return df_product_lines[['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'TotalAmt', 'Line_JSON']].copy()
+        return df_product_lines[['Id', 'customer_name', 'transaction_date', 'item_name_raw', 'transaction_type', 'Amount']].copy()
 
 
     # --- EXECUTION: Runs both extraction functions ---
@@ -307,7 +305,7 @@ def run_pipeline(request=None):
         df_combined_filtered = pd.concat(dfs_to_concat, ignore_index=True)
 
         # --- Final Selection and Rename ---
-        amount_key = 'TotalAmt' # Use the line-item amount key
+        amount_key = 'Amount' # Use the line-item amount key
         
         df_payments_final = df_combined_filtered[[
             'Id', 
@@ -316,7 +314,6 @@ def run_pipeline(request=None):
             'item_name_raw', 
             'transaction_type', 
             amount_key, 
-            'Line_JSON'  # <-- ADD THIS
         ]].rename(columns={
             'Id': 'transaction_id', 
             amount_key: 'total_amount', 
@@ -338,6 +335,7 @@ def run_pipeline(request=None):
         bq_client = bigquery.Client.from_service_account_json(BQ_KEY_FILE) 
         print("✅ BigQuery Client authenticated.")
     except Exception as e:
+        print(f"❌ BigQuery Auth Failed (Key File): {e}")
         return f"BigQuery Auth Failed (Key File): {e}", 500
 
     # Define Target and Execute Load Job
