@@ -116,8 +116,8 @@ def run_pipeline(request=None):
         return f"QBO Authentication Failed: {e}", 500
 
     access_token = auth_client.access_token
-    #print("--- Authentication Success. Starting Pipeline Execution ---")
-    raise Exception("CLOUDMONITORING_ALERT_TEST_FAILURE: Intentionally crashing the pipeline to test alert.")
+    print("--- Authentication Success. Starting Pipeline Execution ---")
+    #raise Exception("CLOUDMONITORING_ALERT_TEST_FAILURE: Intentionally crashing the pipeline to test alert.")
     
     print("✅ QBO Client authenticated and tokens refreshed. Ready for BQ sync.") 
 
