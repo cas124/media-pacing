@@ -328,16 +328,20 @@ def run_pipeline(request=None):
     print("✅ Data transformation complete.")
 
 
-    # ==============================================================================
+   # ==============================================================================
     # 5. BIGQUERY LOADING (L)
     # ==============================================================================
     
-    # Authenticate BigQuery using the Service Account file deployed with the function
+    # Authenticate BigQuery using Default Credentials (handled by Env Var)
+    print("Attempting BigQuery Authentication...") # Debug print
     try:
-        bq_client = bigquery.Client.from_service_account_json(BQ_KEY_FILE) 
+        # UPDATED: No file path needed. It automatically uses GOOGLE_APPLICATION_CREDENTIALS
+        bq_client = bigquery.Client() 
         print("✅ BigQuery Client authenticated.")
     except Exception as e:
-        return f"BigQuery Auth Failed (Key File): {e}", 500
+        # UPDATED: Print the error so it shows in Cloud Run logs!
+        print(f"❌ FATAL ERROR: BigQuery Auth Failed: {e}")
+        raise e # Crash the container so the job is marked as "Failed"
 
     # Define Target and Execute Load Job
     PROJECT_ID = BQ_PROJECT_ID
@@ -349,6 +353,7 @@ def run_pipeline(request=None):
     try:
         df_to_load = df_payments_final 
 
+        print(f"Starting upload to {table_ref}...") # Debug print
         job = bq_client.load_table_from_dataframe(df_to_load, table_ref, job_config=job_config)
         job.result() 
         
@@ -357,7 +362,9 @@ def run_pipeline(request=None):
         return success_message, 200
     
     except Exception as e:
-        return f"BigQuery Load Failed: {e}", 500
+        # UPDATED: Print and Raise
+        print(f"❌ FATAL ERROR: BigQuery Load Job Failed: {e}")
+        raise e
 
 # ==============================================================================
 # LOCAL EXECUTION ENTRY POINT (Run this function)
