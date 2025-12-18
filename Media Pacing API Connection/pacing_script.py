@@ -10,9 +10,10 @@ from google.oauth2 import service_account
 # ---------------------------------------------------------
 PROJECT_ID = 'media-pacing'
 DATASET_ID = 'marketing_data'
-TABLE_ID = 'daily_spend'  
+TABLE_ID = 'daily_spend'  # Changed 'daily spend' to 'daily_spend' (spaces not allowed)
 
-SECRET_ID = 'media_pacing-bigquery-key' 
+# The name of the secret you created in Google Cloud Secret Manager
+SECRET_ID = 'marketing-bigquery-key' 
 VERSION_ID = 'latest'
 
 # Construct the full table reference (project.dataset.table)
@@ -81,3 +82,41 @@ def load_to_bigquery(data):
             source_file,
             FULL_TABLE_ID,
             job_config=job_config
+        )
+        
+        job.result() # Wait for job to complete
+        
+        print(f"✅ Success! Loaded {job.output_rows} rows.")
+        
+    except Exception as e:
+        print(f"❌ Error loading data to BigQuery: {e}")
+
+# ---------------------------------------------------------
+# 4. EXECUTION (Simulation)
+# ---------------------------------------------------------
+if __name__ == "__main__":
+    
+    # Simulating data fetch (Replace this list with your API fetcher logic later)
+    yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
+    
+    dummy_data = [
+        {
+            "date": yesterday,
+            "platform": "Meta",
+            "campaign_name": "Retargeting_Q4",
+            "spend": 540.20,
+            "impressions": 12000,
+            "link_clicks": 340 # Meta specific metric
+        },
+        {
+            "date": yesterday,
+            "platform": "Snapchat",
+            "campaign_name": "Brand_Awareness_GenZ",
+            "spend": 210.50,
+            "impressions": 45000,
+            "swipe_ups": 115 # Snap specific metric
+        }
+    ]
+    
+    # Run the load
+    load_to_bigquery(dummy_data)
