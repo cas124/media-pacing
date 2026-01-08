@@ -1,0 +1,2 @@
+echo "requests" > requirements.txt
+echo "google-cloud-bigquery" >> requirements.txt
