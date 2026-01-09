@@ -8,7 +8,7 @@ steps:
       - learndash-sync  # This is the name your function will have in GCP
       - --gen2
       - --region=us-central1
-      - --source=./learndash_sync # <--- IMPORTANT: This points to your subfolder
+      - --source=./learndash_function # <--- IMPORTANT: This points to your subfolder
       - --entry-point=main # Make sure your python function is named 'def main(...):'
       - --runtime=python310
       - --trigger-http

@@ -8,4 +8,4 @@ pandas-gbq
 numpy
 google-cloud-secret-manager
 gunicorn
-python-quickbooks  # <-- ADD THIS MISSING LINE
+python-quickbooks  
